@@ -64,6 +64,9 @@ void setup(){
   servo1.attach(3);
   servo2.attach(5);
 
+  // Pressure
+  pinMode(15, INPUT);
+
   // Thermo
   pinMode(thermoPin, OUTPUT);
   
@@ -80,6 +83,8 @@ void setup(){
   ICR1 = 8000;   // TRIGGER TIMER INTERRUPT EVERY 1mS  
   sei();         // MAKE SURE GLOBAL INTERRUPTS ARE ENABLED
 
+  // Potentiometer
+  pinMode(1, INPUT);
 }
 
 int lengthBuffer = 100;
@@ -89,8 +94,10 @@ boolean increasing = true;
 
 volatile uint32_t avg = 0;
 
-void loop(){
- 
+void loop() {
+   int pressure = analogRead(15);
+   int pot1 = analogRead(1);
+   Serial.print("Pot: "); Serial.println(pot1);
    
 //  Serial.print("S");          // S tells processing that the following string is sensor data
 //  Serial.println(Signal);     // Signal holds the latest raw Pulse Sensor signal
@@ -109,31 +116,18 @@ void loop(){
 //  analogWrite(11,Fade);
 }
 
-
 // THIS IS THE TIMER 1 INTERRUPT SERVICE ROUTINE. IT WILL BE PUT INTO THE LIBRARY
+
 ISR(TIMER1_OVF_vect){ // triggered every time Timer 1 overflows
   // Timer 1 makes sure that we take a reading every milisecond
 
   Signal = analogRead(pulsePin);
   breathValue = analogRead(breathPin);
   
-//  Serial.print("R");
-//  Serial.print(breathValue); Serial.print(" - ");
   int val = map(breathValue, 250, 300, 0, 179);     // scale it to use it with the servo (value between 0 and 180) 
   val = (val < 0) ? 0 : val;
   val = (val > 180) ? 180 : val;
-
-//  int sum = 0;
-//  for (int i = 1; i < lengthBuffer; i++) { 
-//    int breath = breaths[i];
-//    breaths[i-1] = breath; 
-//    sum += breath;
-//  }
-//  breaths[lengthBuffer-1] = val;
-  
   avg = (avg * 99 + (uint32_t)val) / 100;
-//  Serial.print(" Running Average: ");Serial.println(avg);
-
 
   // write avg to breath
   analogWrite(necklace1pin, map(avg, 0, 81, 255, 0));  
@@ -155,7 +149,8 @@ ISR(TIMER1_OVF_vect){ // triggered every time Timer 1 overflows
     }
   first = false;      // only seed once please
 }
-// THIS IS THE BANDPAS FILTER. GENERATED AT www-users.cs.york.ac.uk/~fisher/mkfilter/trad.html
+
+// THIS IS THE BANDPASS FILTER. GENERATED AT www-users.cs.york.ac.uk/~fisher/mkfilter/trad.html
 //  BUTTERWORTH LOWPASS ORDER = 3; SAMPLERATE = 1mS; CORNER = 5Hz
     Lxv[0] = Lxv[1]; Lxv[1] = Lxv[2]; Lxv[2] = Lxv[3];
     Lxv[3] = NSignal<<10;    // insert the normalized data into the lowpass filter
